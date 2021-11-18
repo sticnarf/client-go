@@ -556,7 +556,8 @@ func (req *Request) ToBatchCommandsRequest() *tikvpb.BatchCommandsRequest_Reques
 
 // Response wraps all kv/coprocessor responses.
 type Response struct {
-	Resp interface{}
+	Resp               interface{}
+	ServerSideDuration time.Duration
 }
 
 // FromBatchCommandsResponse converts a BatchCommands response to Response.
@@ -566,57 +567,183 @@ func FromBatchCommandsResponse(res *tikvpb.BatchCommandsResponse_Response) (*Res
 	}
 	switch res := res.GetCmd().(type) {
 	case *tikvpb.BatchCommandsResponse_Response_Get:
-		return &Response{Resp: res.Get}, nil
+		resp := &Response{Resp: res.Get}
+		if res.Get != nil && res.Get.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.Get.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_Scan:
-		return &Response{Resp: res.Scan}, nil
+		resp := &Response{Resp: res.Scan}
+		if res.Scan != nil && res.Scan.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.Scan.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_Prewrite:
-		return &Response{Resp: res.Prewrite}, nil
+		resp := &Response{Resp: res.Prewrite}
+		if res.Prewrite != nil && res.Prewrite.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.Prewrite.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_Commit:
-		return &Response{Resp: res.Commit}, nil
+		resp := &Response{Resp: res.Commit}
+		if res.Commit != nil && res.Commit.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.Commit.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_Cleanup:
-		return &Response{Resp: res.Cleanup}, nil
+		resp := &Response{Resp: res.Cleanup}
+		if res.Cleanup != nil && res.Cleanup.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.Cleanup.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_BatchGet:
-		return &Response{Resp: res.BatchGet}, nil
+		resp := &Response{Resp: res.BatchGet}
+		if res.BatchGet != nil && res.BatchGet.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.BatchGet.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_BatchRollback:
-		return &Response{Resp: res.BatchRollback}, nil
+		resp := &Response{Resp: res.BatchRollback}
+		if res.BatchRollback != nil && res.BatchRollback.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.BatchRollback.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_ScanLock:
-		return &Response{Resp: res.ScanLock}, nil
+		resp := &Response{Resp: res.ScanLock}
+		if res.ScanLock != nil && res.ScanLock.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.ScanLock.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_ResolveLock:
-		return &Response{Resp: res.ResolveLock}, nil
+		resp := &Response{Resp: res.ResolveLock}
+		if res.ResolveLock != nil && res.ResolveLock.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.ResolveLock.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_GC:
-		return &Response{Resp: res.GC}, nil
+		resp := &Response{Resp: res.GC}
+		if res.GC != nil && res.GC.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.GC.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_DeleteRange:
-		return &Response{Resp: res.DeleteRange}, nil
+		resp := &Response{Resp: res.DeleteRange}
+		if res.DeleteRange != nil && res.DeleteRange.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.DeleteRange.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_RawGet:
-		return &Response{Resp: res.RawGet}, nil
+		resp := &Response{Resp: res.RawGet}
+		if res.RawGet != nil && res.RawGet.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.RawGet.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_RawBatchGet:
-		return &Response{Resp: res.RawBatchGet}, nil
+		resp := &Response{Resp: res.RawBatchGet}
+		if res.RawBatchGet != nil && res.RawBatchGet.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.RawBatchGet.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_RawPut:
-		return &Response{Resp: res.RawPut}, nil
+		resp := &Response{Resp: res.RawPut}
+		if res.RawPut != nil && res.RawPut.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.RawPut.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_RawBatchPut:
-		return &Response{Resp: res.RawBatchPut}, nil
+		resp := &Response{Resp: res.RawBatchPut}
+		if res.RawBatchPut != nil && res.RawBatchPut.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.RawBatchPut.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_RawDelete:
-		return &Response{Resp: res.RawDelete}, nil
+		resp := &Response{Resp: res.RawDelete}
+		if res.RawDelete != nil && res.RawDelete.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.RawDelete.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_RawBatchDelete:
-		return &Response{Resp: res.RawBatchDelete}, nil
+		resp := &Response{Resp: res.RawBatchDelete}
+		if res.RawBatchDelete != nil && res.RawBatchDelete.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.RawBatchDelete.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_RawDeleteRange:
-		return &Response{Resp: res.RawDeleteRange}, nil
+		resp := &Response{Resp: res.RawDeleteRange}
+		if res.RawDeleteRange != nil && res.RawDeleteRange.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.RawDeleteRange.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_RawScan:
-		return &Response{Resp: res.RawScan}, nil
+		resp := &Response{Resp: res.RawScan}
+		if res.RawScan != nil && res.RawScan.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.RawScan.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_Coprocessor:
-		return &Response{Resp: res.Coprocessor}, nil
+		resp := &Response{Resp: res.Coprocessor}
+		if res.Coprocessor != nil && res.Coprocessor.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.Coprocessor.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_PessimisticLock:
-		return &Response{Resp: res.PessimisticLock}, nil
+		resp := &Response{Resp: res.PessimisticLock}
+		if res.PessimisticLock != nil && res.PessimisticLock.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.PessimisticLock.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_PessimisticRollback:
-		return &Response{Resp: res.PessimisticRollback}, nil
+		resp := &Response{Resp: res.PessimisticRollback}
+		if res.PessimisticRollback != nil && res.PessimisticRollback.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.PessimisticRollback.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_Empty:
 		return &Response{Resp: res.Empty}, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_TxnHeartBeat:
-		return &Response{Resp: res.TxnHeartBeat}, nil
+		resp := &Response{Resp: res.TxnHeartBeat}
+		if res.TxnHeartBeat != nil && res.TxnHeartBeat.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.TxnHeartBeat.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_CheckTxnStatus:
-		return &Response{Resp: res.CheckTxnStatus}, nil
+		resp := &Response{Resp: res.CheckTxnStatus}
+		if res.CheckTxnStatus != nil && res.CheckTxnStatus.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.CheckTxnStatus.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	case *tikvpb.BatchCommandsResponse_Response_CheckSecondaryLocks:
-		return &Response{Resp: res.CheckSecondaryLocks}, nil
+		resp := &Response{Resp: res.CheckSecondaryLocks}
+		if res.CheckSecondaryLocks != nil && res.CheckSecondaryLocks.Meta != nil {
+			resp.ServerSideDuration = time.Duration(res.CheckSecondaryLocks.Meta.ProcessDurationUs) * time.Microsecond
+		}
+		return resp, nil
+
 	}
 	panic("unreachable")
 }
@@ -912,63 +1039,237 @@ func CallRPC(ctx context.Context, client tikvpb.TikvClient, req *Request) (*Resp
 	var err error
 	switch req.Type {
 	case CmdGet:
-		resp.Resp, err = client.KvGet(ctx, req.Get())
+		kvResp, err1 := client.KvGet(ctx, req.Get())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdScan:
-		resp.Resp, err = client.KvScan(ctx, req.Scan())
+		kvResp, err1 := client.KvScan(ctx, req.Scan())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdPrewrite:
-		resp.Resp, err = client.KvPrewrite(ctx, req.Prewrite())
+		kvResp, err1 := client.KvPrewrite(ctx, req.Prewrite())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdPessimisticLock:
-		resp.Resp, err = client.KvPessimisticLock(ctx, req.PessimisticLock())
+		kvResp, err1 := client.KvPessimisticLock(ctx, req.PessimisticLock())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdPessimisticRollback:
-		resp.Resp, err = client.KVPessimisticRollback(ctx, req.PessimisticRollback())
+		kvResp, err1 := client.KVPessimisticRollback(ctx, req.PessimisticRollback())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdCommit:
-		resp.Resp, err = client.KvCommit(ctx, req.Commit())
+		kvResp, err1 := client.KvCommit(ctx, req.Commit())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdCleanup:
-		resp.Resp, err = client.KvCleanup(ctx, req.Cleanup())
+		kvResp, err1 := client.KvCleanup(ctx, req.Cleanup())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdBatchGet:
-		resp.Resp, err = client.KvBatchGet(ctx, req.BatchGet())
+		kvResp, err1 := client.KvBatchGet(ctx, req.BatchGet())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdBatchRollback:
-		resp.Resp, err = client.KvBatchRollback(ctx, req.BatchRollback())
+		kvResp, err1 := client.KvBatchRollback(ctx, req.BatchRollback())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdScanLock:
-		resp.Resp, err = client.KvScanLock(ctx, req.ScanLock())
+		kvResp, err1 := client.KvScanLock(ctx, req.ScanLock())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdResolveLock:
-		resp.Resp, err = client.KvResolveLock(ctx, req.ResolveLock())
+		kvResp, err1 := client.KvResolveLock(ctx, req.ResolveLock())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdGC:
-		resp.Resp, err = client.KvGC(ctx, req.GC())
+		kvResp, err1 := client.KvGC(ctx, req.GC())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdDeleteRange:
-		resp.Resp, err = client.KvDeleteRange(ctx, req.DeleteRange())
+		kvResp, err1 := client.KvDeleteRange(ctx, req.DeleteRange())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawGet:
-		resp.Resp, err = client.RawGet(ctx, req.RawGet())
+		kvResp, err1 := client.RawGet(ctx, req.RawGet())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawBatchGet:
-		resp.Resp, err = client.RawBatchGet(ctx, req.RawBatchGet())
+		kvResp, err1 := client.RawBatchGet(ctx, req.RawBatchGet())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawPut:
-		resp.Resp, err = client.RawPut(ctx, req.RawPut())
+		kvResp, err1 := client.RawPut(ctx, req.RawPut())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawBatchPut:
-		resp.Resp, err = client.RawBatchPut(ctx, req.RawBatchPut())
+		kvResp, err1 := client.RawBatchPut(ctx, req.RawBatchPut())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawDelete:
-		resp.Resp, err = client.RawDelete(ctx, req.RawDelete())
+		kvResp, err1 := client.RawDelete(ctx, req.RawDelete())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawBatchDelete:
-		resp.Resp, err = client.RawBatchDelete(ctx, req.RawBatchDelete())
+		kvResp, err1 := client.RawBatchDelete(ctx, req.RawBatchDelete())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawDeleteRange:
-		resp.Resp, err = client.RawDeleteRange(ctx, req.RawDeleteRange())
+		kvResp, err1 := client.RawDeleteRange(ctx, req.RawDeleteRange())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawScan:
-		resp.Resp, err = client.RawScan(ctx, req.RawScan())
+		kvResp, err1 := client.RawScan(ctx, req.RawScan())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdUnsafeDestroyRange:
-		resp.Resp, err = client.UnsafeDestroyRange(ctx, req.UnsafeDestroyRange())
+		kvResp, err1 := client.UnsafeDestroyRange(ctx, req.UnsafeDestroyRange())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdGetKeyTTL:
-		resp.Resp, err = client.RawGetKeyTTL(ctx, req.RawGetKeyTTL())
+		kvResp, err1 := client.RawGetKeyTTL(ctx, req.RawGetKeyTTL())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRawCompareAndSwap:
-		resp.Resp, err = client.RawCompareAndSwap(ctx, req.RawCompareAndSwap())
+		kvResp, err1 := client.RawCompareAndSwap(ctx, req.RawCompareAndSwap())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRegisterLockObserver:
-		resp.Resp, err = client.RegisterLockObserver(ctx, req.RegisterLockObserver())
+		kvResp, err1 := client.RegisterLockObserver(ctx, req.RegisterLockObserver())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdCheckLockObserver:
-		resp.Resp, err = client.CheckLockObserver(ctx, req.CheckLockObserver())
+		kvResp, err1 := client.CheckLockObserver(ctx, req.CheckLockObserver())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdRemoveLockObserver:
-		resp.Resp, err = client.RemoveLockObserver(ctx, req.RemoveLockObserver())
+		kvResp, err1 := client.RemoveLockObserver(ctx, req.RemoveLockObserver())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdPhysicalScanLock:
-		resp.Resp, err = client.PhysicalScanLock(ctx, req.PhysicalScanLock())
+		kvResp, err1 := client.PhysicalScanLock(ctx, req.PhysicalScanLock())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdCop:
-		resp.Resp, err = client.Coprocessor(ctx, req.Cop())
+		kvResp, err1 := client.Coprocessor(ctx, req.Cop())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdMPPTask:
 		resp.Resp, err = client.DispatchMPPTask(ctx, req.DispatchMPPTask())
 	case CmdMPPAlive:
@@ -995,23 +1296,71 @@ func CallRPC(ctx context.Context, client tikvpb.TikvClient, req *Request) (*Resp
 			Tikv_BatchCoprocessorClient: streamClient,
 		}
 	case CmdMvccGetByKey:
-		resp.Resp, err = client.MvccGetByKey(ctx, req.MvccGetByKey())
+		kvResp, err1 := client.MvccGetByKey(ctx, req.MvccGetByKey())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdMvccGetByStartTs:
-		resp.Resp, err = client.MvccGetByStartTs(ctx, req.MvccGetByStartTs())
+		kvResp, err1 := client.MvccGetByStartTs(ctx, req.MvccGetByStartTs())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdSplitRegion:
-		resp.Resp, err = client.SplitRegion(ctx, req.SplitRegion())
+		kvResp, err1 := client.SplitRegion(ctx, req.SplitRegion())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdEmpty:
 		resp.Resp, err = &tikvpb.BatchCommandsEmptyResponse{}, nil
 	case CmdCheckTxnStatus:
-		resp.Resp, err = client.KvCheckTxnStatus(ctx, req.CheckTxnStatus())
+		kvResp, err1 := client.KvCheckTxnStatus(ctx, req.CheckTxnStatus())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdCheckSecondaryLocks:
-		resp.Resp, err = client.KvCheckSecondaryLocks(ctx, req.CheckSecondaryLocks())
+		kvResp, err1 := client.KvCheckSecondaryLocks(ctx, req.CheckSecondaryLocks())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdTxnHeartBeat:
-		resp.Resp, err = client.KvTxnHeartBeat(ctx, req.TxnHeartBeat())
+		kvResp, err1 := client.KvTxnHeartBeat(ctx, req.TxnHeartBeat())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdStoreSafeTS:
-		resp.Resp, err = client.GetStoreSafeTS(ctx, req.StoreSafeTS())
+		kvResp, err1 := client.GetStoreSafeTS(ctx, req.StoreSafeTS())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	case CmdLockWaitInfo:
-		resp.Resp, err = client.GetLockWaitInfo(ctx, req.LockWaitInfo())
+		kvResp, err1 := client.GetLockWaitInfo(ctx, req.LockWaitInfo())
+		resp.Resp = kvResp
+		err = err1
+		if kvResp != nil && kvResp.Meta != nil {
+			resp.ServerSideDuration = time.Duration(kvResp.Meta.ProcessDurationUs) * time.Microsecond
+		}
+
 	default:
 		return nil, errors.Errorf("invalid request type: %v", req.Type)
 	}

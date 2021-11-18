@@ -349,26 +349,37 @@ type sendReqHistCacheKey struct {
 	staleRad bool
 }
 
-func (c *RPCClient) updateTiKVSendReqHistogram(req *tikvrpc.Request, start time.Time, staleRead bool) {
+func (c *RPCClient) updateTiKVSendReqHistogram(req *tikvrpc.Request, resp *tikvrpc.Response, start time.Time, staleRead bool) {
 	key := sendReqHistCacheKey{
 		req.Type,
 		req.Context.GetPeer().GetStoreId(),
 		staleRead,
 	}
 
+	type observers struct {
+		sendReqHistogram prometheus.Observer
+		networkHistogram prometheus.Observer
+	}
+
 	v, ok := sendReqHistCache.Load(key)
 	if !ok {
 		reqType := req.Type.String()
 		storeID := strconv.FormatUint(req.Context.GetPeer().GetStoreId(), 10)
-		v = metrics.TiKVSendReqHistogram.WithLabelValues(reqType, storeID, strconv.FormatBool(staleRead))
+		sendReqHistogram := metrics.TiKVSendReqHistogram.WithLabelValues(reqType, storeID, strconv.FormatBool(staleRead))
+		networkHistogram := metrics.TiKVRPCNetworkHistogram.WithLabelValues(reqType, storeID, strconv.FormatBool(staleRead))
+		v = observers{sendReqHistogram, networkHistogram}
 		sendReqHistCache.Store(key, v)
 	}
 
-	v.(prometheus.Observer).Observe(time.Since(start).Seconds())
+	clientSideDuration := time.Since(start)
+	v.(observers).sendReqHistogram.Observe(clientSideDuration.Seconds())
+	if resp != nil && resp.ServerSideDuration > 0 {
+		v.(observers).networkHistogram.Observe((clientSideDuration - resp.ServerSideDuration).Seconds())
+	}
 }
 
 // SendRequest sends a Request to server and receives Response.
-func (c *RPCClient) SendRequest(ctx context.Context, addr string, req *tikvrpc.Request, timeout time.Duration) (*tikvrpc.Response, error) {
+func (c *RPCClient) SendRequest(ctx context.Context, addr string, req *tikvrpc.Request, timeout time.Duration) (resp *tikvrpc.Response, err error) {
 	if span := opentracing.SpanFromContext(ctx); span != nil && span.Tracer() != nil {
 		span1 := span.Tracer().StartSpan(fmt.Sprintf("rpcClient.SendRequest, region ID: %d, type: %s", req.RegionId, req.Type), opentracing.ChildOf(span.Context()))
 		defer span1.Finish()
@@ -394,7 +405,7 @@ func (c *RPCClient) SendRequest(ctx context.Context, addr string, req *tikvrpc.R
 			detail := stmtExec.(*util.ExecDetails)
 			atomic.AddInt64(&detail.WaitKVRespDuration, int64(time.Since(start)))
 		}
-		c.updateTiKVSendReqHistogram(req, start, staleRead)
+		c.updateTiKVSendReqHistogram(req, resp, start, staleRead)
 	}()
 
 	// TiDB RPC server supports batch RPC, but batch connection will send heart beat, It's not necessary since

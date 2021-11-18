@@ -44,6 +44,7 @@ var (
 	TiKVTxnCmdHistogram                      *prometheus.HistogramVec
 	TiKVBackoffHistogram                     *prometheus.HistogramVec
 	TiKVSendReqHistogram                     *prometheus.HistogramVec
+	TiKVRPCNetworkHistogram                  *prometheus.HistogramVec
 	TiKVCoprocessorHistogram                 *prometheus.HistogramVec
 	TiKVLockResolverCounter                  *prometheus.CounterVec
 	TiKVRegionErrorCounter                   *prometheus.CounterVec
@@ -138,6 +139,15 @@ func initMetrics(namespace, subsystem string) {
 			Name:      "request_seconds",
 			Help:      "Bucketed histogram of sending request duration.",
 			Buckets:   prometheus.ExponentialBuckets(0.0005, 2, 29), // 0.5ms ~ 1.5days
+		}, []string{LblType, LblStore, LblStaleRead})
+
+	TiKVRPCNetworkHistogram = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "network_seconds",
+			Help:      "Bucketed histogram of sending request duration.",
+			Buckets:   prometheus.ExponentialBuckets(0.00005, 1.5, 29), // 0.5ms ~ 1.5days
 		}, []string{LblType, LblStore, LblStaleRead})
 
 	TiKVCoprocessorHistogram = prometheus.NewHistogramVec(
@@ -559,6 +569,7 @@ func RegisterMetrics() {
 	prometheus.MustRegister(TiKVTxnCmdHistogram)
 	prometheus.MustRegister(TiKVBackoffHistogram)
 	prometheus.MustRegister(TiKVSendReqHistogram)
+	prometheus.MustRegister(TiKVRPCNetworkHistogram)
 	prometheus.MustRegister(TiKVCoprocessorHistogram)
 	prometheus.MustRegister(TiKVLockResolverCounter)
 	prometheus.MustRegister(TiKVRegionErrorCounter)
