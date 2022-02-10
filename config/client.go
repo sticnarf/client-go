@@ -82,8 +82,9 @@ type TiKVClient struct {
 	StoreLivenessTimeout string           `toml:"store-liveness-timeout" json:"store-liveness-timeout"`
 	CoprCache            CoprocessorCache `toml:"copr-cache" json:"copr-cache"`
 	// TTLRefreshedTxnSize controls whether a transaction should update its TTL or not.
-	TTLRefreshedTxnSize      int64  `toml:"ttl-refreshed-txn-size" json:"ttl-refreshed-txn-size"`
-	ResolveLockLiteThreshold uint64 `toml:"resolve-lock-lite-threshold" json:"resolve-lock-lite-threshold"`
+	TTLRefreshedTxnSize      int64         `toml:"ttl-refreshed-txn-size" json:"ttl-refreshed-txn-size"`
+	ResolveLockLiteThreshold uint64        `toml:"resolve-lock-lite-threshold" json:"resolve-lock-lite-threshold"`
+	MinRTT                   time.Duration `toml:"min-rtt" json:"min-rtt"`
 }
 
 // AsyncCommit is the config for the async commit feature. The switch to enable it is a system variable.
@@ -152,6 +153,8 @@ func DefaultTiKVClient() TiKVClient {
 		},
 
 		ResolveLockLiteThreshold: 16,
+
+		MinRTT: 100 * time.Microsecond,
 	}
 }
 

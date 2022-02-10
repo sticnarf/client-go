@@ -91,6 +91,9 @@ var (
 	TiKVSmallReadDuration                    prometheus.Histogram
 	TiKVReadThroughput                       prometheus.Histogram
 	TiKVUnsafeDestroyRangeFailuresCounterVec *prometheus.CounterVec
+
+	TiKVPrefetchSuccessCounter prometheus.Counter
+	TiKVPrefetchLatency        prometheus.Histogram
 )
 
 // Label constants.
@@ -541,6 +544,22 @@ func initMetrics(namespace, subsystem string) {
 			Help:      "Counter of unsafe destroyrange failures",
 		}, []string{LblType})
 
+	TiKVPrefetchSuccessCounter = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "prefetch_success",
+			Help:      "Counter of prefetch successes",
+		})
+	TiKVPrefetchLatency = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "prefetch_latency",
+			Help:      "Bucketed histogram of prefetch latency",
+			Buckets:   prometheus.ExponentialBuckets(1e-5, 2, 10),
+		})
+
 	initShortcuts()
 }
 
@@ -605,6 +624,9 @@ func RegisterMetrics() {
 	prometheus.MustRegister(TiKVTxnCommitBackoffCount)
 	prometheus.MustRegister(TiKVSmallReadDuration)
 	prometheus.MustRegister(TiKVReadThroughput)
+
+	prometheus.MustRegister(TiKVPrefetchSuccessCounter)
+	prometheus.MustRegister(TiKVPrefetchLatency)
 }
 
 // readCounter reads the value of a prometheus.Counter.

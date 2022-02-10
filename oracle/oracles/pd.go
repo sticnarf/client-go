@@ -61,6 +61,11 @@ type pdOracle struct {
 	// txn_scope (string) -> lastArrivalTSPointer (*uint64)
 	lastArrivalTSMap sync.Map
 	quit             chan struct{}
+
+	anchor    time.Time
+	recentTS  uint64
+	updatedAt int64 // microsecond from anchor
+	minRTT    time.Duration
 }
 
 // NewPdOracle create an Oracle that uses a pd client source.
@@ -68,13 +73,16 @@ type pdOracle struct {
 // PdOracle mantains `lastTS` to store the last timestamp got from PD server. If
 // `GetTimestamp()` is not called after `updateInterval`, it will be called by
 // itself to keep up with the timestamp on PD server.
-func NewPdOracle(pdClient pd.Client, updateInterval time.Duration) (oracle.Oracle, error) {
+func NewPdOracle(pdClient pd.Client, updateInterval, minRTT time.Duration) (oracle.Oracle, error) {
 	o := &pdOracle{
-		c:    pdClient,
-		quit: make(chan struct{}),
+		c:      pdClient,
+		quit:   make(chan struct{}),
+		anchor: time.Now(),
+		minRTT: minRTT,
 	}
 	ctx := context.TODO()
 	go o.updateTS(ctx, updateInterval)
+	go o.recentTSUpdater()
 	// Initialize the timestamp of the global txnScope by Get.
 	_, err := o.GetTimestamp(ctx, &oracle.Option{TxnScope: oracle.GlobalTxnScope})
 	if err != nil {
@@ -82,6 +90,39 @@ func NewPdOracle(pdClient pd.Client, updateInterval time.Duration) (oracle.Oracl
 		return nil, err
 	}
 	return o, nil
+}
+
+func (o *pdOracle) recentTSUpdater() {
+	interval := o.minRTT
+	t := time.NewTicker(interval)
+	defer t.Stop()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	type updateRes struct {
+		ts        uint64
+		updatedAt int64
+	}
+	resChan := make(chan updateRes)
+
+	for {
+		select {
+		case <-t.C:
+			go func() {
+				updatedAt := time.Since(o.anchor).Microseconds()
+				ts, err := o.GetTimestamp(ctx, &oracle.Option{TxnScope: oracle.GlobalTxnScope})
+				if err == nil {
+					resChan <- updateRes{ts: ts, updatedAt: updatedAt}
+				}
+			}()
+		case res := <-resChan:
+			if res.updatedAt > o.updatedAt {
+				atomic.StoreUint64(&o.recentTS, res.ts)
+				atomic.StoreInt64(&o.updatedAt, res.updatedAt)
+			}
+		}
+	}
 }
 
 // IsExpired returns whether lockTS+TTL is expired, both are ms. It uses `lastTS`
@@ -123,7 +164,24 @@ func (f *tsFuture) Wait() (uint64, error) {
 	return ts, nil
 }
 
+type instantFuture struct {
+	ts uint64
+}
+
+func (f instantFuture) Wait() (uint64, error) {
+	return f.ts, nil
+}
+
 func (o *pdOracle) GetTimestampAsync(ctx context.Context, opt *oracle.Option) oracle.Future {
+	if opt.ForRead {
+		latency := time.Since(o.anchor).Microseconds() - atomic.LoadInt64(&o.updatedAt)
+		metrics.TiKVPrefetchLatency.Observe(float64(latency) / 1e6)
+		if latency < 3*o.minRTT.Microseconds() {
+			metrics.TiKVPrefetchSuccessCounter.Inc()
+			return instantFuture{ts: atomic.LoadUint64(&o.recentTS)}
+		}
+	}
+
 	var ts pd.TSFuture
 	if opt.TxnScope == oracle.GlobalTxnScope || opt.TxnScope == "" {
 		ts = o.c.GetTSAsync(ctx)

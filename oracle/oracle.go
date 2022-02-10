@@ -42,6 +42,7 @@ import (
 // Option represents available options for the oracle.Oracle.
 type Option struct {
 	TxnScope string
+	ForRead  bool
 }
 
 // Oracle is the interface that provides strictly ascending timestamps.
