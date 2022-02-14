@@ -183,6 +183,7 @@ func NewKVStore(uuid string, pdClient pd.Client, spkv SafePointKV, tikvclient Cl
 	store.clientMu.client = client.NewReqCollapse(tikvclient)
 	store.lockResolver = txnlock.NewLockResolver(store)
 
+	store.wg.Add(2)
 	go store.runSafePointChecker()
 	go store.safeTSUpdater()
 

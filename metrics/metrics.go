@@ -94,6 +94,8 @@ var (
 
 	TiKVPrefetchSuccessCounter prometheus.Counter
 	TiKVPrefetchLatency        prometheus.Histogram
+	TiKVPrefetchTSOCounter     prometheus.Counter
+	TiKVPrefetchDurationSum    prometheus.Counter
 )
 
 // Label constants.
@@ -559,6 +561,20 @@ func initMetrics(namespace, subsystem string) {
 			Help:      "Bucketed histogram of prefetch latency",
 			Buckets:   prometheus.ExponentialBuckets(1e-5, 2, 10),
 		})
+	TiKVPrefetchTSOCounter = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "prefetch_tso_count",
+			Help:      "Counter of prefetch tso",
+		})
+	TiKVPrefetchDurationSum = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "prefetch_duration_sum",
+			Help:      "Sum of duration spent on prefetch",
+		})
 
 	initShortcuts()
 }
@@ -627,6 +643,8 @@ func RegisterMetrics() {
 
 	prometheus.MustRegister(TiKVPrefetchSuccessCounter)
 	prometheus.MustRegister(TiKVPrefetchLatency)
+	prometheus.MustRegister(TiKVPrefetchTSOCounter)
+	prometheus.MustRegister(TiKVPrefetchDurationSum)
 }
 
 // readCounter reads the value of a prometheus.Counter.

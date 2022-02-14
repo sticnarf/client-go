@@ -110,9 +110,12 @@ func (o *pdOracle) recentTSUpdater() {
 		select {
 		case <-t.C:
 			go func() {
-				updatedAt := time.Since(o.anchor).Microseconds()
+				now := time.Now()
+				updatedAt := now.Sub(o.anchor).Microseconds()
 				ts, err := o.GetTimestamp(ctx, &oracle.Option{TxnScope: oracle.GlobalTxnScope})
 				if err == nil {
+					metrics.TiKVPrefetchTSOCounter.Inc()
+					metrics.TiKVPrefetchDurationSum.Add(time.Since(now).Seconds())
 					resChan <- updateRes{ts: ts, updatedAt: updatedAt}
 				}
 			}()
