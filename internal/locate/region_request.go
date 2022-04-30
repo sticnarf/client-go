@@ -807,6 +807,15 @@ func (s *replicaSelector) onNotLeader(bo *retry.Backoffer, ctx *RPCContext, notL
 	return true, nil
 }
 
+func (s *replicaSelector) onServerIsBusy(bo *retry.Backoffer, ctx *RPCContext) (shouldRetry bool, err error) {
+	if s.checkLiveness(bo, s.targetReplica()) != reachable {
+		s.invalidateReplicaStore(s.targetReplica(), errors.Errorf("server is busy, ctx: %v", ctx))
+	}
+	err = bo.Backoff(retry.BoTiKVServerBusy, errors.Errorf("server is busy, ctx: %v", ctx))
+	shouldRetry = err == nil
+	return
+}
+
 // updateLeader updates the leader of the cached region.
 // If the leader peer isn't found in the region, the region will be invalidated.
 func (s *replicaSelector) updateLeader(leader *metapb.Peer) {
@@ -1405,6 +1414,8 @@ func (s *RegionRequestSender) onRegionError(bo *retry.Backoffer, ctx *RPCContext
 			zap.Stringer("ctx", ctx))
 		if ctx != nil && ctx.Store != nil && ctx.Store.storeType == tikvrpc.TiFlash {
 			err = bo.Backoff(retry.BoTiFlashServerBusy, errors.Errorf("server is busy, ctx: %v", ctx))
+		} else if s.replicaSelector != nil {
+			return s.replicaSelector.onServerIsBusy(bo, ctx)
 		} else {
 			err = bo.Backoff(retry.BoTiKVServerBusy, errors.Errorf("server is busy, ctx: %v", ctx))
 		}
