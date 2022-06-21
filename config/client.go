@@ -43,7 +43,7 @@ import (
 
 const (
 	// DefStoreLivenessTimeout is the default value for store liveness timeout.
-	DefStoreLivenessTimeout = "1s"
+	DefStoreLivenessTimeout = "10s"
 )
 
 // TiKVClient is the config for tikv client.

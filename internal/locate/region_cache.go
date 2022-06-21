@@ -2377,7 +2377,7 @@ type livenessState uint32
 var (
 	livenessSf singleflight.Group
 	// storeLivenessTimeout is the max duration of resolving liveness of a TiKV instance.
-	storeLivenessTimeout = time.Second
+	storeLivenessTimeout = 10 * time.Second
 )
 
 // SetStoreLivenessTimeout sets storeLivenessTimeout to t.
