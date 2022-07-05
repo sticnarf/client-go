@@ -701,6 +701,14 @@ func (s *replicaSelector) refreshRegionStore() {
 	// When stores change, we mark this replicaSelector as invalid to let the caller
 	// recreate a new replicaSelector.
 	if &oldRegionStore.stores != &newRegionStore.stores {
+		var oldAddresses, newAddresses []string
+		for _, store := range oldRegionStore.stores {
+			oldAddresses = append(oldAddresses, store.GetAddr())
+		}
+		for _, store := range newRegionStore.stores {
+			newAddresses = append(newAddresses, store.GetAddr())
+		}
+		logutil.BgLogger().Info("region store changes, set to invalidStore", zap.Uint64("regionID", s.region.GetID()), zap.Strings("old", oldAddresses), zap.Strings("new", newAddresses))
 		s.state = &invalidStore{}
 		return
 	}

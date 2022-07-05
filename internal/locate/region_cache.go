@@ -288,6 +288,7 @@ func newRegion(bo *retry.Backoffer, c *RegionCache, pdRegion *pd.Region) (*Regio
 	rs.workTiKVIdx = leaderAccessIdx
 	r.meta.Peers = availablePeers
 
+	logutil.BgLogger().Info("new region", zap.Uint64("regionID", pdRegion.Meta.Id))
 	r.setStore(rs)
 
 	// mark region has been init accessed.
@@ -1689,6 +1690,7 @@ func (c *RegionCache) changeToActiveStore(region *Region, store *Store) (addr st
 			}
 		}
 		if region.compareAndSwapStore(oldRegionStore, newRegionStore) {
+			logutil.BgLogger().Info("change to active store", zap.Uint64("regionID", region.GetID()))
 			break
 		}
 	}
@@ -2287,6 +2289,14 @@ func (s *Store) reResolve(c *RegionCache) (bool, error) {
 		c.storeMu.Lock()
 		c.storeMu.stores[newStore.storeID] = newStore
 		c.storeMu.Unlock()
+		var oldLabels, newLabels []string
+		for _, label := range s.labels {
+			oldLabels = append(oldLabels, fmt.Sprintf("{%s: %s}", label.Key, label.Value))
+		}
+		for _, label := range store.GetLabels() {
+			newLabels = append(newLabels, fmt.Sprintf("{%s: %s}", label.Key, label.Value))
+		}
+		logutil.BgLogger().Info("set resolve state to deleted", zap.String("oldAddr", s.addr), zap.String("newAddr", addr), zap.Strings("oldLabels", oldLabels), zap.Strings("newLabels", newLabels))
 		s.setResolveState(deleted)
 		return false, nil
 	}
