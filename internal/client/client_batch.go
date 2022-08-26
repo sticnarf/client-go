@@ -37,6 +37,8 @@ package client
 
 import (
 	"context"
+	"fmt"
+	"github.com/valyala/fastrand"
 	"math"
 	"runtime/trace"
 	"sync"
@@ -760,6 +762,13 @@ func sendBatchRequest(
 	req *tikvpb.BatchCommandsRequest_Request,
 	timeout time.Duration,
 ) (*tikvrpc.Response, error) {
+	var r uint32
+	if getReq := req.GetGet(); getReq != nil {
+		r = fastrand.Uint32()
+		if r%1024 == 0 {
+			getReq.SendTime = fmt.Sprintf("%x %d", r, time.Now().UnixNano())
+		}
+	}
 	entry := &batchCommandsEntry{
 		ctx:           ctx,
 		req:           req,
@@ -787,6 +796,10 @@ func sendBatchRequest(
 	case res, ok := <-entry.res:
 		if !ok {
 			return nil, errors.WithStack(entry.err)
+		}
+		if r != 0 {
+			logutil.BgLogger().Info("get response",
+				zap.String("r", fmt.Sprintf("%x", r)), zap.String("returned", res.GetGet().SendTime), zap.Int64("now", time.Now().UnixNano()))
 		}
 		return tikvrpc.FromBatchCommandsResponse(res)
 	case <-ctx.Done():
