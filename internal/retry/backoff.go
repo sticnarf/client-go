@@ -67,8 +67,7 @@ type Backoffer struct {
 
 	errors         []error
 	configs        []*Config
-	backoffSleepMS map[string]int
-	backoffTimes   map[string]int
+	backoffInfoMap map[string]backoffInfo
 	parent         *Backoffer
 }
 
@@ -76,6 +75,11 @@ type txnStartCtxKeyType struct{}
 
 // TxnStartKey is a key for transaction start_ts info in context.Context.
 var TxnStartKey interface{} = txnStartCtxKeyType{}
+
+type backoffInfo struct {
+	times       int
+	sleepMillis int
+}
 
 // NewBackoffer (Deprecated) creates a Backoffer with maximum sleep time(in ms).
 func NewBackoffer(ctx context.Context, maxSleep int) *Backoffer {
@@ -180,14 +184,16 @@ func (b *Backoffer) BackoffWithCfgAndMaxSleep(cfg *Config, maxSleepMs int, err e
 	if _, ok := isSleepExcluded[cfg.name]; ok {
 		b.excludedSleep += realSleep
 	}
-	if b.backoffSleepMS == nil {
-		b.backoffSleepMS = make(map[string]int)
+	if b.backoffInfoMap == nil {
+		b.backoffInfoMap = make(map[string]backoffInfo)
 	}
-	b.backoffSleepMS[cfg.name] += realSleep
-	if b.backoffTimes == nil {
-		b.backoffTimes = make(map[string]int)
+	if info, ok := b.backoffInfoMap[cfg.name]; ok {
+		info.times++
+		info.sleepMillis += realSleep
+		b.backoffInfoMap[cfg.name] = info
+	} else {
+		b.backoffInfoMap[cfg.name] = backoffInfo{times: 1, sleepMillis: realSleep}
 	}
-	b.backoffTimes[cfg.name]++
 
 	stmtExec := b.ctx.Value(util.ExecDetailsKey)
 	if stmtExec != nil {
@@ -224,8 +230,8 @@ func (b *Backoffer) String() string {
 }
 
 // copyMapWithoutRecursive is only used to deep copy map fields in the Backoffer type.
-func copyMapWithoutRecursive(srcMap map[string]int) map[string]int {
-	result := map[string]int{}
+func copyMapWithoutRecursive(srcMap map[string]backoffInfo) map[string]backoffInfo {
+	result := make(map[string]backoffInfo, len(srcMap))
 	for k, v := range srcMap {
 		result[k] = v
 	}
@@ -245,8 +251,7 @@ func (b *Backoffer) Clone() *Backoffer {
 		vars:           b.vars,
 		errors:         append([]error{}, b.errors...),
 		configs:        append([]*Config{}, b.configs...),
-		backoffSleepMS: copyMapWithoutRecursive(b.backoffSleepMS),
-		backoffTimes:   copyMapWithoutRecursive(b.backoffTimes),
+		backoffInfoMap: copyMapWithoutRecursive(b.backoffInfoMap),
 		parent:         b.parent,
 	}
 }
@@ -264,8 +269,7 @@ func (b *Backoffer) Fork() (*Backoffer, context.CancelFunc) {
 		excludedSleep:  b.excludedSleep,
 		errors:         append([]error{}, b.errors...),
 		configs:        append([]*Config{}, b.configs...),
-		backoffSleepMS: copyMapWithoutRecursive(b.backoffSleepMS),
-		backoffTimes:   copyMapWithoutRecursive(b.backoffTimes),
+		backoffInfoMap: copyMapWithoutRecursive(b.backoffInfoMap),
 		vars:           b.vars,
 		parent:         b,
 	}, cancel
@@ -305,21 +309,29 @@ func (b *Backoffer) SetCtx(ctx context.Context) {
 
 // GetBackoffTimes returns a map contains backoff time count by type.
 func (b *Backoffer) GetBackoffTimes() map[string]int {
-	return b.backoffTimes
+	backoffTimes := make(map[string]int, len(b.backoffInfoMap))
+	for name, info := range b.backoffInfoMap {
+		backoffTimes[name] = info.times
+	}
+	return backoffTimes
 }
 
 // GetTotalBackoffTimes returns the total backoff times of the backoffer.
 func (b *Backoffer) GetTotalBackoffTimes() int {
 	total := 0
-	for _, time := range b.backoffTimes {
-		total += time
+	for _, info := range b.backoffInfoMap {
+		total += info.times
 	}
 	return total
 }
 
 // GetBackoffSleepMS returns a map contains backoff sleep time by type.
 func (b *Backoffer) GetBackoffSleepMS() map[string]int {
-	return b.backoffSleepMS
+	backoffSleepMS := make(map[string]int, len(b.backoffInfoMap))
+	for name, info := range b.backoffInfoMap {
+		backoffSleepMS[name] = info.sleepMillis
+	}
+	return backoffSleepMS
 }
 
 // ErrorsNum returns the number of errors.
@@ -348,7 +360,8 @@ func (b *Backoffer) ResetMaxSleep(maxSleep int) {
 func (b *Backoffer) longestSleepCfg() (*Config, int) {
 	candidate := ""
 	maxSleep := 0
-	for cfgName, sleepTime := range b.backoffSleepMS {
+	for cfgName, info := range b.backoffInfoMap {
+		sleepTime := info.sleepMillis
 		if _, ok := isSleepExcluded[cfgName]; sleepTime > maxSleep && !ok {
 			maxSleep = sleepTime
 			candidate = cfgName
