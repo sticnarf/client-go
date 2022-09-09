@@ -251,7 +251,7 @@ func (b *Backoffer) Clone() *Backoffer {
 		vars:           b.vars,
 		errors:         append([]error{}, b.errors...),
 		configs:        append([]*Config{}, b.configs...),
-		backoffInfoMap: copyMapWithoutRecursive(b.backoffInfoMap),
+		backoffInfoMap: nil,
 		parent:         b.parent,
 	}
 }
