@@ -264,8 +264,8 @@ type replicaSelector struct {
 // selectorState is the interface of states of the replicaSelector.
 // Here is the main state transition diagram:
 //
-//                                    exceeding maxReplicaAttempt
-//           +-------------------+   || RPC failure && unreachable && no forwarding
+// |                                    exceeding maxReplicaAttempt
+// |         +-------------------+   || RPC failure && unreachable && no forwarding
 // +-------->+ accessKnownLeader +----------------+
 // |         +------+------------+                |
 // |                |                             |
@@ -282,7 +282,7 @@ type replicaSelector struct {
 // | leader becomes   v                           +---+---+
 // | reachable  +-----+-----+ all proxies are tried   ^
 // +------------+tryNewProxy+-------------------------+
-//              +-----------+
+// |          	+-----------+
 type selectorState interface {
 	next(*retry.Backoffer, *replicaSelector) (*RPCContext, error)
 	onSendSuccess(*replicaSelector)
@@ -973,6 +973,10 @@ func (s *RegionRequestSender) SendReqCtx(
 		req.Context.MaxExecutionDurationMs = uint64(timeout.Milliseconds())
 	}
 
+	if req.Context.LoadLimit == 0 {
+		req.Context.LoadLimit = 1.5
+	}
+
 	s.reset()
 	tryTimes := 0
 	defer func() {
@@ -1499,9 +1503,20 @@ func (s *RegionRequestSender) onRegionError(bo *retry.Backoffer, ctx *RPCContext
 	}
 
 	if regionErr.GetServerIsBusy() != nil {
+		busy := regionErr.GetServerIsBusy()
 		logutil.BgLogger().Warn("tikv reports `ServerIsBusy` retry later",
-			zap.String("reason", regionErr.GetServerIsBusy().GetReason()),
+			zap.String("reason", busy.GetReason()),
+			zap.Float32("load", busy.GetLoad()),
 			zap.Stringer("ctx", ctx))
+		if busy.GetLoad() > 0 {
+			if state, ok := s.replicaSelector.state.(*accessKnownLeader); ok {
+				s.replicaSelector.state = &accessFollower{
+					tryLeader: true,
+					leaderIdx: state.leaderIdx,
+					lastIdx:   state.leaderIdx,
+				}
+			}
+		}
 		if ctx != nil && ctx.Store != nil && ctx.Store.storeType.IsTiFlashRelatedType() {
 			err = bo.Backoff(retry.BoTiFlashServerBusy, errors.Errorf("server is busy, ctx: %v", ctx))
 		} else {
