@@ -511,16 +511,17 @@ func (c *RegionCache) SetPDClient(client pd.Client) {
 
 // RPCContext contains data that is needed to send RPC to a region.
 type RPCContext struct {
-	Region     RegionVerID
-	Meta       *metapb.Region
-	Peer       *metapb.Peer
-	AccessIdx  AccessIndex
-	Store      *Store
-	Addr       string
-	AccessMode accessMode
-	ProxyStore *Store // nil means proxy is not used
-	ProxyAddr  string // valid when ProxyStore is not nil
-	TiKVNum    int    // Number of TiKV nodes among the region's peers. Assuming non-TiKV peers are all TiFlash peers.
+	Region      RegionVerID
+	Meta        *metapb.Region
+	Peer        *metapb.Peer
+	AccessIdx   AccessIndex
+	Store       *Store
+	Addr        string
+	AccessMode  accessMode
+	ProxyStore  *Store // nil means proxy is not used
+	ProxyAddr   string // valid when ProxyStore is not nil
+	TiKVNum     int    // Number of TiKV nodes among the region's peers. Assuming non-TiKV peers are all TiFlash peers.
+	ReplicaRead bool
 }
 
 func (c *RPCContext) String() string {

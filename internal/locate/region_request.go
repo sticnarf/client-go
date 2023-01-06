@@ -569,7 +569,12 @@ func (state *accessFollower) next(bo *retry.Backoffer, selector *replicaSelector
 		state.lastIdx = state.leaderIdx
 		selector.targetIdx = state.leaderIdx
 	}
-	return selector.buildRPCContext(bo)
+	rpcCtx, err := selector.buildRPCContext(bo)
+	if err != nil {
+		return nil, err
+	}
+	rpcCtx.ReplicaRead = true
+	return rpcCtx, nil
 }
 
 func (state *accessFollower) onSendFailure(bo *retry.Backoffer, selector *replicaSelector, cause error) {
@@ -974,7 +979,7 @@ func (s *RegionRequestSender) SendReqCtx(
 	}
 
 	if req.Context.LoadLimit == 0 {
-		req.Context.LoadLimit = 1.5
+		req.Context.LoadLimit = 20
 	}
 
 	s.reset()
@@ -1016,6 +1021,7 @@ func (s *RegionRequestSender) SendReqCtx(
 			resp, err = tikvrpc.GenRegionErrorResp(req, &errorpb.Error{EpochNotMatch: &errorpb.EpochNotMatch{}})
 			return resp, nil, err
 		}
+		req.ReplicaRead = rpcCtx.ReplicaRead
 
 		logutil.Eventf(bo.GetCtx(), "send %s request to region %d at %s", req.Type, regionID.id, rpcCtx.Addr)
 		s.storeAddr = rpcCtx.Addr
@@ -1510,11 +1516,14 @@ func (s *RegionRequestSender) onRegionError(bo *retry.Backoffer, ctx *RPCContext
 			zap.Stringer("ctx", ctx))
 		if busy.GetLoad() > 0 {
 			if state, ok := s.replicaSelector.state.(*accessKnownLeader); ok {
+				s.replicaSelector.replicas[state.leaderIdx].attempts--
+
 				s.replicaSelector.state = &accessFollower{
-					tryLeader: true,
+					tryLeader: false,
 					leaderIdx: state.leaderIdx,
-					lastIdx:   state.leaderIdx,
+					lastIdx:   -1,
 				}
+				return true, nil
 			}
 		}
 		if ctx != nil && ctx.Store != nil && ctx.Store.storeType.IsTiFlashRelatedType() {
